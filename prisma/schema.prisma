@@ -1,0 +1,188 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User model with college verification and trust score
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  image         String?
+  bio           String?
+  college       String?   // College/university name
+  collegeEmail  String?   // Verified college email
+  isVerified    Boolean   @default(false)
+  isAdmin       Boolean   @default(false)  // Admin role
+  trustScore    Float     @default(0)  // 0-5 rating average
+  
+  // Relations
+  posts         Post[]
+  comments      Comment[]
+  sentRequests  JoinRequest[]  @relation("RequestSender")
+  receivedRequests JoinRequest[] @relation("RequestReceiver")
+  sentMessages  ChatMessage[]  @relation("MessageSender")
+  receivedMessages ChatMessage[] @relation("MessageReceiver")
+  givenRatings  Rating[]       @relation("RatingGiver")
+  receivedRatings Rating[]     @relation("RatingReceiver")
+  conversations Conversation[] @relation("ConversationParticipants")
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// Category for posts
+model Category {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  icon        String?   // Emoji or icon name
+  description String?
+  posts       Post[]
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// Main post model for sharing/co-buying
+model Post {
+  id            String      @id @default(cuid())
+  title         String
+  description   String
+  type          PostType    // CO_BUY, SHARE, RENT, TRIP, PROJECT
+  category      Category    @relation(fields: [categoryId], references: [id])
+  categoryId    String
+  
+  // Item details
+  itemName      String
+  itemPrice     Float?      // Optional price
+  itemCondition String?     // For sharing/renting: new, like_new, good, fair
+  itemImage     String?     // Image URL
+  
+  // Sharing details
+  maxParticipants Int       @default(1)
+  currentParticipants Int   @default(0)
+  location      String?
+  
+  // Terms and agreement
+  terms         String?     // Sharing terms, agreement template
+  startDate     DateTime?
+  endDate       DateTime?
+  
+  // Status
+  status        PostStatus  @default(OPEN)
+  isUrgent      Boolean     @default(false)
+  
+  // Relations
+  author        User        @relation(fields: [authorId], references: [id])
+  authorId      String
+  comments      Comment[]
+  joinRequests  JoinRequest[]
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+// Comment/discussion thread
+model Comment {
+  id        String    @id @default(cuid())
+  content   String
+  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId    String
+  author    User      @relation(fields: [authorId], references: [id])
+  authorId  String
+  parentId  String?   // For nested replies
+  likes     Int       @default(0)
+  
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+// Join request for posts
+model JoinRequest {
+  id          String        @id @default(cuid())
+  post        Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId      String
+  sender      User          @relation("RequestSender", fields: [senderId], references: [id])
+  senderId    String
+  receiver    User          @relation("RequestReceiver", fields: [receiverId], references: [id])
+  receiverId  String
+  message     String?       // Optional message with request
+  status      RequestStatus @default(PENDING)
+  
+  // Agreement
+  agreement   String?       // Mutually agreed terms
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+// Conversation for private chats
+model Conversation {
+  id          String        @id @default(cuid())
+  participants User[]       @relation("ConversationParticipants")
+  messages    ChatMessage[]
+  postId      String?       // Optional: linked to a post
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+// Chat messages
+model ChatMessage {
+  id            String        @id @default(cuid())
+  conversation  Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String
+  sender        User          @relation("MessageSender", fields: [senderId], references: [id])
+  senderId      String
+  receiver      User          @relation("MessageReceiver", fields: [receiverId], references: [id])
+  receiverId    String
+  content       String
+  isRead        Boolean       @default(false)
+  
+  createdAt     DateTime      @default(now())
+}
+
+// Rating/Review after transaction
+model Rating {
+  id          String    @id @default(cuid())
+  giver       User      @relation("RatingGiver", fields: [giverId], references: [id])
+  giverId     String
+  receiver    User      @relation("RatingReceiver", fields: [receiverId], references: [id])
+  receiverId  String
+  score       Int       // 1-5 stars
+  review      String?
+  postId      String?   // Optional: linked to a post
+  
+  createdAt   DateTime  @default(now())
+}
+
+// Enums
+enum PostType {
+  CO_BUY      // Group buying
+  SHARE       // Share ownership
+  RENT        // Rent out
+  TRIP        // Plan trip together
+  PROJECT     // Collaborate on project
+  STUDY       // Study group
+}
+
+enum PostStatus {
+  OPEN        // Accepting participants
+  IN_PROGRESS // In progress
+  CLOSED      // Completed/closed
+  CANCELLED   // Cancelled
+}
+
+enum RequestStatus {
+  PENDING     // Awaiting response
+  ACCEPTED    // Accepted
+  REJECTED    // Rejected
+  COMPLETED   // Transaction completed
+}

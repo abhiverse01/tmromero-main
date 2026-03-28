@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-
+import { PrismaClient } from '@prisma/client';
+const db = new PrismaClient();
 // GET /api/admin/users - List all users with pagination
 export async function GET(request: NextRequest) {
   try {

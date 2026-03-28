@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { PrismaClient } from '@prisma/client';
+const db = new PrismaClient();
 
 // GET /api/comments - Get comments for a post
 export async function GET(request: NextRequest) {

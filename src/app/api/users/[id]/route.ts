@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { PrismaClient } from '@prisma/client';
+const db = new PrismaClient();
 
 // GET /api/users/[id] - Get user profile
 export async function GET(

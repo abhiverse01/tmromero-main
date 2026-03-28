@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { PrismaClient } from '@prisma/client';
+const db = new PrismaClient();
 const db = new PrismaClient();import { randomUUID } from 'crypto';
 
 function simpleHash(password: string): string {
